@@ -1,6 +1,8 @@
 ﻿using System.Globalization;
 using System.Text;
 using MathNet.Numerics.LinearAlgebra;
+using Microsoft.Extensions.AI;
+using OpenAI.Embeddings;
 
 namespace KeywordGraphUsingOpenAI
 {
@@ -67,6 +69,28 @@ namespace KeywordGraphUsingOpenAI
 
 				sw.WriteLine($"{CsvEscape(data[i].Word)}, {x.ToString(CultureInfo.InvariantCulture)},{y.ToString(CultureInfo.InvariantCulture)}");
 			}
+		}
+
+		public static async Task GenerateEmbeddings(string[] words)
+		{
+			var openAiKey = GetEnvironmentVariable("OPEN_API_KEY");
+			var vectors = new List<(string Word, float[] Vector)>();
+
+			var embedder = new EmbeddingClient(
+							  model: "text-embedding-3-small",
+							  apiKey: openAiKey
+						   ).AsIEmbeddingGenerator();
+
+			foreach (var word in words)
+			{
+				var embeddings = await embedder.GenerateAsync(word,
+									new Microsoft.Extensions.AI.EmbeddingGenerationOptions { Dimensions = 512 });
+
+				var vector = embeddings.Vector.ToArray();
+				vectors.Add((word, vector));
+			}
+
+			TransformAndSaveCsv(vectors, "animals.csv");
 		}
 	}
 }
